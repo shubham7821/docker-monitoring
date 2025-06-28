@@ -40,7 +40,7 @@ services:
   links:
     - influxdb:influxsrv
   ports:
-    - "3000:3000"
+    - "3001:3000"
   environment:
     - HTTP_USER=admin
     - HTTP_PASS=admin
