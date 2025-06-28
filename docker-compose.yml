@@ -1,51 +1,57 @@
-version: '2'
+version: '3.8'  # Update to version 3.8 or later
 
 services:
- influxdbData:
-  image: busybox
-  volumes:
-    - ./data/influxdb:/data
+  influxdbData:
+    image: busybox
+    volumes:
+      - ./data/influxdb:/data
 
- influxdb:
-  image: tutum/influxdb:0.9
-  restart: always
-  environment:
-    - PRE_CREATE_DB=cadvisor
-  ports:
-    - "8083:8083"
-    - "8086:8086"
-  expose:
-    - "8090"
-    - "8099"
-  volumes_from:
-    - "influxdbData"
+  influxdb:
+    image: influxdb:latest  # Use the latest InfluxDB image
+    restart: always
+    environment:
+      - PRE_CREATE_DB=cadvisor
+    ports:
+      - "8083:8083"
+      - "8086:8086"
+    expose:
+      - "8090"
+      - "8099"
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb  # Mount data from the host
+    networks:
+      - monitoring
 
- cadvisor:
-  image: google/cadvisor:v0.29.0
-  links:
-    - influxdb:influxsrv
-  command: -storage_driver=influxdb -storage_driver_db=cadvisor -storage_driver_host=influxsrv:8086
-  restart: always
-  ports:
-    - "8080:8080"
-  volumes:
-    - /:/rootfs:ro
-    - /var/run:/var/run:rw
-    - /sys:/sys:ro
-    - /var/lib/docker/:/var/lib/docker:ro
+  cadvisor:
+    image: google/cadvisor:v0.29.0
+    command: -storage_driver=influxdb -storage_driver_db=cadvisor -storage_driver_host=influxdb:8086
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - monitoring
 
- grafana:
-  image: grafana/grafana:2.6.0
-  restart: always
-  links:
-    - influxdb:influxsrv
-  ports:
-    - "3001:3000"
-  environment:
-    - HTTP_USER=admin
-    - HTTP_PASS=admin
-    - INFLUXDB_HOST=influxsrv
-    - INFLUXDB_PORT=8086
-    - INFLUXDB_NAME=cadvisor
-    - INFLUXDB_USER=root
-    - INFLUXDB_PASS=root
+  grafana:
+    image: grafana/grafana:latest  # Use the latest Grafana image
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_NAME=cadvisor
+      - INFLUXDB_USER=root
+      - INFLUXDB_PASS=root
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
